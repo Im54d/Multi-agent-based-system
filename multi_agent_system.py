@@ -12,7 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import torch
 import os
-
+import requests
 class Message:
     def __init__(self, sender_id, receiver_id, content):
         self.sender_id = sender_id
@@ -27,15 +27,17 @@ class EventElement(TextElement):
         return "Events:<br>" + "<br>".join(model.events[-5:])
 
 class ResearchAgent(Agent):
-    def __init__(self, unique_id, model, profile, publications):
+    def __init__(self, unique_id, model, profile, publications, api_info):
         super().__init__(unique_id, model)
         self.profile = profile
         self.publications = publications
+        self.api_info = api_info
 
     def step(self):
         self.move()
         self.provide_information()
         self.check_messages()
+        self.fetch_data()
 
     def move(self):
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
@@ -60,15 +62,37 @@ class ResearchAgent(Agent):
         event = f"Researcher {self.profile['name']} received message: {message.content}"
         self.model.add_event(event)
 
+    def fetch_data(self):
+        try:
+            response = requests.get(
+                self.api_info['endpoint'],
+                headers=self.api_info['headers'],
+                params=self.api_info['params']
+            )
+            if response.status_code == 200:
+                data = response.json()
+                event = f"Researcher {self.profile['name']} fetched data: {data}"
+                self.model.add_event(event)
+            else:
+                event = f"Researcher {self.profile['name']} failed to fetch data"
+                self.model.add_event(event)
+        except Exception as e:
+            event = f"Researcher {self.profile['name']} encountered an error: {e}"
+            self.model.add_event(event)
+
 class AnalystAgent(Agent):
-    def __init__(self, unique_id, model, current_trends):
+    def __init__(self, unique_id, model, current_trends, api_info):
         super().__init__(unique_id, model)
         self.current_trends = current_trends
+        self.api_info = api_info
+        self.research_data = []
 
     def step(self):
         self.move()
         self.analyze_trends()
         self.check_messages()
+        self.fetch_trends()
+        self.analyze_research_data()
 
     def move(self):
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
@@ -78,6 +102,25 @@ class AnalystAgent(Agent):
     def analyze_trends(self):
         event = f"Analyzing current trends: {self.current_trends}."
         self.model.add_event(event)
+
+    def fetch_trends(self):
+        try:
+            response = requests.get(
+                self.api_info['endpoint'],
+                headers=self.api_info['headers'],
+                params=self.api_info['params']
+            )
+            if response.status_code == 200:
+                data = response.json()
+                event = f"Analyst fetched trends: {data}"
+                self.model.add_event(event)
+                self.current_trends = data  # Update current trends with fetched data
+            else:
+                event = f"Analyst failed to fetch trends"
+                self.model.add_event(event)
+        except Exception as e:
+            event = f"Analyst encountered an error while fetching trends: {e}"
+            self.model.add_event(event)
 
     def send_message(self, receiver_id, content):
         message = Message(self.unique_id, receiver_id, content)
@@ -90,8 +133,18 @@ class AnalystAgent(Agent):
                 self.model.message_queue.remove(message)
 
     def receive_message(self, message):
+        if "research_data" in message.content:
+            self.research_data.append(message.content["research_data"])
         event = f"Analyst received message: {message.content}"
         self.model.add_event(event)
+
+    def analyze_research_data(self):
+        if self.research_data:
+            combined_data = " ".join(self.research_data)
+            event = f"Analyst analyzing research data: {combined_data}"
+            self.model.add_event(event)
+            self.research_data.clear()
+
 
 class RecommenderAgent(Agent):
     def __init__(self, unique_id, model):
@@ -202,10 +255,12 @@ class MultiAgentSystem(Model):
 
         for i, agent_data in enumerate(data['agents']):
             agent_type = agent_data['type']
+            api_info = agent_data.get('api', {})
+
             if agent_type == 'ResearchAgent':
-                agent = ResearchAgent(i, self, agent_data['profile'], agent_data['publications'])
+                agent = ResearchAgent(i, self, agent_data['profile'], agent_data['publications'], api_info)
             elif agent_type == 'AnalystAgent':
-                agent = AnalystAgent(i, self, agent_data['current_trends'])
+                agent = AnalystAgent(i, self, agent_data['current_trends'], api_info)
             elif agent_type == 'RecommenderAgent':
                 agent = RecommenderAgent(i, self)
             elif agent_type == 'NotifierAgent':
@@ -218,6 +273,7 @@ class MultiAgentSystem(Model):
             y = self.random.randrange(self.grid.height)
             self.grid.place_agent(agent, (x, y))
             self.server = None
+
     
         def stop_server(self):
         
@@ -285,3 +341,4 @@ server.model.server = server
 
 server.port = 8521
 server.launch()
+
