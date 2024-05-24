@@ -1,0 +1,22 @@
+{
+  "agents": [
+    {
+      "type": "ResearchAgent",
+      "profile": {
+        "name": "John Doe",
+        "interests": ["Artificial Intelligence", "Machine Learning", "Data Science"]
+      },
+      "publications": ["Paper 1", "Paper 2", "Paper 3"]
+    },
+    {
+      "type": "AnalystAgent",
+      "current_trends": "Artificial Intelligence, Machine Learning, Data Science"
+    },
+    {
+      "type": "RecommenderAgent"
+    },
+    {
+      "type": "NotifierAgent"
+    }
+  ]
+}
