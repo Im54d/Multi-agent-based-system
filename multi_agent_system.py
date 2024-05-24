@@ -114,7 +114,7 @@ class AnalystAgent(Agent):
                 data = response.json()
                 event = f"Analyst fetched trends: {data}"
                 self.model.add_event(event)
-                self.current_trends = data  # Update current trends with fetched data
+                self.current_trends = data  
             else:
                 event = f"Analyst failed to fetch trends"
                 self.model.add_event(event)
