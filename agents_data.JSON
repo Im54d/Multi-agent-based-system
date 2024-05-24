@@ -3,14 +3,29 @@
     {
       "type": "ResearchAgent",
       "profile": {
-        "name": "John Doe",
-        "interests": ["Artificial Intelligence", "Machine Learning", "Data Science"]
+        "name": "Researcher1",
+        "interests": ["AI", "Machine Learning"]
       },
-      "publications": ["Paper 1", "Paper 2", "Paper 3"]
+      "publications": ["Paper1", "Paper2"],
+      "api": {
+        "endpoint": "https://api.crossref.org/works",
+        "method": "GET",
+        "headers": {},
+        "params": {
+          "query.bibliographic": "AI",
+          "rows": 10
+        }
+      }
     },
     {
       "type": "AnalystAgent",
-      "current_trends": "Artificial Intelligence, Machine Learning, Data Science"
+      "current_trends": ["AI", "Big Data"],
+      "api": {
+        "endpoint": "https://api.crossref.org/journals?query=MDPI",
+        "method": "GET",
+        "headers": {},
+        "params": {}
+      }
     },
     {
       "type": "RecommenderAgent"
